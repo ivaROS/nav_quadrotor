@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+
+<robot name="add_rotor_bumpers" xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <xacro:macro name="add_rotor_bumper" params="name">
+      <gazebo reference="${name}">
+            <sensor name='${name}_collision_bumper' type='contact'>
+                <always_on>true</always_on>
+                <contact>
+                  <collision>${name}_collision</collision>
+                </contact>
+                <update_rate> 5 </update_rate>
+                <plugin name="${name}_collision_bumper" filename="libgazebo_ros_bumper.so">
+                  <bumperTopicName>bumper</bumperTopicName>
+                  <frameName>world</frameName>
+                </plugin>
+            </sensor>
+      </gazebo>
+
+  </xacro:macro>
+
+  <xacro:macro name="add_rotor_bumpers" params="namespace">
+    <xacro:add_rotor_bumper name="${namespace}/rotor_0"/>
+    <xacro:add_rotor_bumper name="${namespace}/rotor_1"/>
+    <xacro:add_rotor_bumper name="${namespace}/rotor_2"/>
+    <xacro:add_rotor_bumper name="${namespace}/rotor_3"/>
+  </xacro:macro>
+
+</robot>

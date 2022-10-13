@@ -1,0 +1,72 @@
+<launch>
+     <node name="image_processing_nodelet_manager" type="nodelet" pkg="nodelet" args="manager" required="true"/>
+
+     <node name="depth_image_to_point_cloud_nodelet" pkg="nodelet" type="nodelet" args="load depth_image_proc/point_cloud_xyz image_processing_nodelet_manager" required="true">
+        <remap from="camera_info" to="/rs0r200/camera/depth/camera_info"/>
+        <remap from="image_rect" to="/rs0r200/camera/depth/image_raw"/>
+        <remap from="points" to="/rs0r200/camera/depth/points"/>
+     </node>
+
+    <node name="depth_image_to_rgb_point_cloud_nodelet" pkg="nodelet" type="nodelet" args="load depth_image_proc/point_cloud_xyzrgb image_processing_nodelet_manager" required="true">
+        <remap from="rgb/camera_info" to="/rs0r200/camera/rgb/camera_info"/>
+        <remap from="rgb/image_rect_color" to="/rs0r200/camera/rgb/image_raw"/>
+        <remap from="depth_registered/image_rect" to="/rs0r200/camera/depth/image_raw"/>
+        <remap from="depth_registered/points" to="/rs0r200/camera/depth_registered/points"/>
+    </node>
+
+    <node pkg="nodelet" type="nodelet" name="throttle_nodelet" args="load camera_compression/depth_throttle image_processing_nodelet_manager" output="screen" launch-prefix="" required="true">
+      <param name="rate" type="double" value="10"/>
+      <param name="decimation" type="int" value="1"/>
+      <param name="approx_sync" value="false"/>
+      
+      <remap from="depth/image_in"     to="rs0r200/camera/depth/image_raw"/>
+      <remap from="depth/camera_info_in"     to="rs0r200/camera/depth/camera_info"/>
+
+      <remap from="depth/image_out"     to="rs0r200/camera/depth_throttled/image_raw"/>
+      <remap from="depth/camera_info_out" to="rs0r200/camera/depth_throttled/camera_info"/>
+    </node>
+
+    <node name="throttled_depth_image_to_point_cloud_nodelet" pkg="nodelet" type="nodelet" args="load depth_image_proc/point_cloud_xyz image_processing_nodelet_manager" required="true">
+        <remap from="camera_info" to="/rs0r200/camera/depth_throttled/camera_info"/>
+        <remap from="image_rect" to="/rs0r200/camera/depth_throttled/image_raw"/>
+        <remap from="points" to="/rs0r200/camera/depth_throttled/points"/>
+    </node>
+
+    <node pkg="nodelet" type="nodelet" name="decimate2_nodelet" args="load camera_compression/depth_throttle image_processing_nodelet_manager" output="screen" launch-prefix="" required="true">
+      <param name="rate" type="double" value="-1"/>
+      <param name="decimation" type="int" value="2"/>
+      <param name="approx_sync" value="false"/>
+
+      <remap from="depth/image_in"     to="rs0r200/camera/depth_throttled/image_raw"/>
+      <remap from="depth/camera_info_in"     to="rs0r200/camera/depth_throttled/camera_info"/>
+
+      <remap from="depth/image_out"     to="rs0r200/camera/depth_throttled2/image_raw"/>
+      <remap from="depth/camera_info_out" to="rs0r200/camera/depth_throttled2/camera_info"/>
+    </node>
+
+    <node name="throttled_depth_image2_to_point_cloud_nodelet" pkg="nodelet" type="nodelet" args="load depth_image_proc/point_cloud_xyz image_processing_nodelet_manager">
+        <remap from="camera_info" to="/rs0r200/camera/depth_throttled2/camera_info"/>
+        <remap from="image_rect" to="/rs0r200/camera/depth_throttled2/image_raw"/>
+        <remap from="points" to="/rs0r200/camera/depth_throttled2/points"/>
+    </node>
+
+    <node pkg="nodelet" type="nodelet" name="decimate4_nodelet" args="load camera_compression/depth_throttle image_processing_nodelet_manager" output="screen" launch-prefix="" required="true">
+      <param name="rate" type="double" value="-1"/>
+      <param name="decimation" type="int" value="4"/>
+      <param name="approx_sync" value="false"/>
+
+      <remap from="depth/image_in"     to="rs0r200/camera/depth_throttled/image_raw"/>
+      <remap from="depth/camera_info_in"     to="rs0r200/camera/depth_throttled/camera_info"/>
+
+      <remap from="depth/image_out"     to="rs0r200/camera/depth_throttled4/image_raw"/>
+      <remap from="depth/camera_info_out" to="rs0r200/camera/depth_throttled4/camera_info"/>
+    </node>
+
+    <node name="throttled_depth_image4_to_point_cloud_nodelet" pkg="nodelet" type="nodelet" args="load depth_image_proc/point_cloud_xyz image_processing_nodelet_manager" required="true">
+        <remap from="camera_info" to="/rs0r200/camera/depth_throttled4/camera_info"/>
+        <remap from="image_rect" to="/rs0r200/camera/depth_throttled4/image_raw"/>
+        <remap from="points" to="/rs0r200/camera/depth_throttled4/points"/>
+    </node>
+
+
+</launch>

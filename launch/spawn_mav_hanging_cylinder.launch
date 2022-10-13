@@ -1,0 +1,41 @@
+<launch>
+  <arg name="mav_name" default="hummingbird"/>
+  <arg name="enable_logging" default="false" />
+  <arg name="enable_ground_truth" default="true" />
+  <arg name="log_file" default="$(arg mav_name)" />
+  <arg name="x" default="$(optenv GM_PARAM_INIT_X 0.0)"/>
+  <arg name="y" default="$(optenv GM_PARAM_INIT_Y 0.0)"/>
+  <arg name="z" default="$(optenv GM_PARAM_INIT_Z 0.1)"/>
+  
+  <group ns="$(arg mav_name)">
+    <include file="$(find nav_quadrotor)/launch/spawn_mav.launch">
+      <arg name="reference_frame" value=""/>
+      <arg name="mav_name" value="$(arg mav_name)" />
+      <arg name="model" value="$(find nav_quadrotor)/urdf/mav_with_hanging_cylinder.gazebo" />
+      <arg name="enable_logging" value="$(arg enable_logging)" />
+      <arg name="enable_ground_truth" value="$(arg enable_ground_truth)" />
+      <arg name="log_file" value="$(arg log_file)"/>
+      <arg name="x" value="$(arg x)"/>
+      <arg name="y" value="$(arg y)"/>
+      <arg name="z" value="$(arg z)"/>
+    </include>
+    <node name="lee_position_controller_node" pkg="nav_quadrotor" type="safety_controller_node" output="log" launch-prefix="" required="true">
+      <rosparam command="load" file="$(find nav_quadrotor)/params/lee_controller_$(arg mav_name).yaml" />
+      <rosparam command="load" file="$(find nav_quadrotor)/params/$(arg mav_name)_hanging_cylinder.yaml" />
+      <remap from="odometry" to="odometry_sensor1/odometry" />
+    </node>
+  
+
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" required="true"/>
+        
+  </group>
+
+  <include file="$(find nav_quadrotor)/launch/load_quadrotor_collision_model.launch">
+    <arg name="basic" value="false"/>
+  </include>
+
+  <include file="$(find nav_quadrotor)/launch/throttle_images.launch"/>
+
+  <include file="$(find nav_quadrotor)/launch/projected_pose_publisher.launch"/>
+
+</launch>

@@ -1,0 +1,9 @@
+<launch>
+    <arg name="mav_name" default="hummingbird"/>
+
+    <node name="lee_position_controller_node" pkg="rotors_control" type="lee_position_controller_node" output="screen" ns="$(arg mav_name)">
+      <rosparam command="load" file="$(find nav_quadrotor)/params/lee_controller_$(arg mav_name).yaml" />
+      <rosparam command="load" file="$(find nav_quadrotor)/params/$(arg mav_name)_rs.yaml" />
+      <remap from="odometry" to="odometry_sensor1/odometry" />
+    </node>
+</launch>

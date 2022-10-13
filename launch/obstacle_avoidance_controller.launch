@@ -1,0 +1,89 @@
+<launch>
+  <arg name="debug" default="false"/>
+
+  <arg name="debug_prefix" value="" unless="$(arg debug)"/>
+  <arg name="debug_prefix" value="xterm -e gdb -q -ex run --args" if="$(arg debug)"/>
+
+  <arg name="mav_name" default="hummingbird"/>
+
+  <arg name="record" default="false"/>
+
+  <arg name="detailed_model_param" default="/simplified_robot_description"/>
+  <arg name="point_model_param" default="/point_robot_description"/>
+  <arg name="conservative_egocyl_model_param" default="/conservative_egocyl_robot_description"/>
+  <arg name="liberal_egocan_model_param" default="/egocan_robot_description1"/>
+  <arg name="conservative_egocan_model_param" default="/egocan_robot_description1"/>
+
+
+  <arg name="image" default="/egocylinder/image"/>
+  <arg name="conservative_inflated_image" default="/egocylinder/conservative_inflated_image"/>
+  <arg name="conservative_can_inflated_image" default="/egocylinder/conservative_can_inflated_image"/>
+  <arg name="liberal_inflated_image" default="/egocylinder/liberal_inflated_image"/>
+  <arg name="liberal_can_inflated_image" default="/egocylinder/liberal_can_inflated_image"/>
+
+  <env name="ROSCONSOLE_CONFIG_FILE" value="$(find nav_quadrotor)/data/record_nav_details.conf" if="$(arg record)"/>
+  <env name="ROSCONSOLE_CONFIG_FILE" value="$(find nav_quadrotor)/data/record_timing_data.conf"/>
+
+
+  <arg name="info" default="/egocylinder/egocylinder_info"/>
+
+  <group ns="$(arg mav_name)">
+
+    <node name="obstacle_avoidance_controller_node" pkg="nav_quadrotor" type="global_impl_node" output="log" launch-prefix="$(arg debug_prefix)" clear_params="true" required="true" >
+      <rosparam command="load" file="$(find nav_quadrotor)/params/lee_controller_$(arg mav_name).yaml" />
+      <rosparam command="load" file="$(find nav_quadrotor)/params/$(arg mav_name)_hanging_cylinder.yaml" />
+      <remap from="odometry" to="odometry_sensor1/odometry" />
+      <remap from="sampled_trajectories" to="/sampled_trajectories"/>
+      <remap from="command/motor_speed" to="lee_position_controller_node/commands_in"/>
+      <remap from="move_base_simple" to = "/move_base_simple"/>
+      <remap from="move_base" to ="/move_base"/>
+      <remap from="command/trajectory" to="~/current_trajectory_msg"/>
+
+      <remap from="~end_point_trajectory_source/candidate_waypoints" to="/candidate_waypoints"/>
+      <remap from="~local_goal_trajectory_source/candidate_waypoints" to="/egocylinder/cur_path_goal_pose_array"/>
+      <remap from="~end_point_trajectory_source/detailed_candidate_waypoints" to="/egocylinder/detailed_candidate_waypoints"/>
+
+
+      <param name="fixed_frame_id" value="world"/>
+      <param name="planning_frame_id" value="world"/>
+      <param name="base_frame_id" value="hummingbird/base_link"/>
+
+      <rosparam command="load" file="$(find nav_quadrotor)/params/planning_params.yaml"/>
+
+      <rosparam file="$(find nav_quadrotor)/params/static_global_costmap.yaml" command="load" ns="global_costmap"/>
+      <rosparam file="$(find global_planner_plus)/config/global_planner.yaml" command="load" ns="potentials_planner"/>
+
+      <rosparam file="$(find nav_quadrotor)/params/static_global_costmap.yaml" command="load" ns="obstacles_costmap"/>
+
+      <!--Detailed collision checking-->
+      <param name="egocylindrical_image_cc_wrapper/egocylindrical_image_topic" value="$(arg image)"/>
+      <param name="egocylindrical_image_cc_wrapper/egocylindrical_info_topic" value="$(arg info)"/>
+      <param name="egocylindrical_image_cc_wrapper/egocylindrical_image_collision_checker/robot_model/param_name" value="$(arg detailed_model_param)"/>
+
+      <!--Conservative collision checking-->
+      <param name="conservative_inflated_egocylindrical_image_cc_wrapper/egocylindrical_image_topic" value="$(arg conservative_inflated_image)"/>
+      <param name="conservative_inflated_egocylindrical_image_cc_wrapper/egocylindrical_info_topic" value="$(arg info)"/>
+      <param name="conservative_inflated_egocylindrical_image_cc_wrapper/egocylindrical_image_collision_checker/robot_model/param_name" value="$(arg conservative_egocyl_model_param)"/>
+
+      <!--Liberal collision checking-->
+      <param name="liberal_inflated_egocylindrical_image_cc_wrapper/egocylindrical_image_topic" value="$(arg liberal_inflated_image)"/>
+      <param name="liberal_inflated_egocylindrical_image_cc_wrapper/egocylindrical_info_topic" value="$(arg info)"/>
+      <param name="liberal_inflated_egocylindrical_image_cc_wrapper/egocylindrical_image_collision_checker/robot_model/param_name" value="$(arg conservative_egocyl_model_param)"/>
+
+      <!--Liberal egocan collision checking-->
+      <param name="inflated_egocan_cc_wrapper2/egocan_image_topic" value="$(arg liberal_can_inflated_image)"/>
+      <param name="inflated_egocan_cc_wrapper2/egocan_info_topic" value="$(arg info)"/>
+      <param name="inflated_egocan_cc_wrapper2/egocan_collision_checker/robot_model/param_name" value="$(arg liberal_egocan_model_param)"/>
+
+      <!--Conservative egocan collision checking-->
+      <param name="inflated_egocan_cc_wrapper1/egocan_image_topic" value="$(arg conservative_can_inflated_image)"/>
+      <param name="inflated_egocan_cc_wrapper1/egocan_info_topic" value="$(arg info)"/>
+      <param name="inflated_egocan_cc_wrapper1/egocan_collision_checker/robot_model/param_name" value="$(arg conservative_egocan_model_param)"/>
+
+    </node>
+  </group>
+
+
+  <node name="centroids_relay" pkg="topic_tools" type="relay" args="/centroids /hummingbird/selected_centroids"/>
+
+</launch>

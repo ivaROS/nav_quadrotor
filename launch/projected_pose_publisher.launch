@@ -1,0 +1,7 @@
+<launch>
+
+     <node pkg="nav_quadrotor" type="projected_pose_publisher.py" name="projected_pose_publisher_node" output="screen" launch-prefix="" ns="/hummingbird">
+      <remap from="odom"       to="ground_truth/odometry"/>
+    </node>
+
+</launch>

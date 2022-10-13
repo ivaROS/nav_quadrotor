@@ -1,0 +1,24 @@
+<launch>
+    <arg name="nodelet_manager"/>
+    <arg name="ec_im" default="image"/>
+    <arg name="can_image" default="can_image"/>
+    <arg name="ec_info" default="egocylinder_info"/>
+    <arg name="nodelet_mode" default="load"/>
+    <arg name="name" default="default"/>
+    <arg name="egocan_enabled" default="true"/>
+
+
+    <node name="$(arg name)_range_image_converter_nodelet" pkg="nodelet" type="nodelet" args="$(arg nodelet_mode) egocylindrical/range_image_converter_nodelet $(arg nodelet_manager)" launch-prefix="">
+        <remap from="data_out" to="$(arg name)_data"/>
+        <remap from="image_in" to="$(arg ec_im)"/>
+        <remap from="can_image_in" to="$(arg can_image)"/>
+        <remap from="info_in" to="$(arg ec_info)"/>
+        <param name="egocan_enabled" value="$(arg egocan_enabled)"/>
+    </node>
+
+    <node name="$(arg name)_converted_ec_point_publisher_nodelet" pkg="nodelet" type="nodelet" args="$(arg nodelet_mode) egocylindrical/point_cloud_nodelet $(arg nodelet_manager)" >
+        <remap from="egocylindrical_points" to="$(arg name)_data"/>
+        <remap from="cylindrical" to="$(arg name)_converted_points"/>
+    </node>
+
+</launch>

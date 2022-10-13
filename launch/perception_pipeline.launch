@@ -1,0 +1,178 @@
+<launch>
+  <arg name="use_provided_manager" default="false" />
+
+  <arg name="replay" default="false"/>
+
+  <arg name="standalone" default="true"/>
+  <arg name="nodelet_mode" default="standalone" if="$(arg standalone)"/>
+  <arg name="nodelet_mode" default="load" unless="$(arg standalone)"/>
+
+  <arg name="provided_manager" default="camera/camera_nodelet_manager"/>
+  <arg name="nodelet_manager" default="egocylindrical_nodelet_manager" unless="$(arg use_provided_manager)" />
+  <arg name="nodelet_manager" default="$(arg provided_manager)" if="$(arg use_provided_manager)" />
+
+  <arg name="debug" default="false"/>
+  <arg name="debug_prefix" default="xterm -e gdb -ex run --args" if="$(arg debug)"/>
+  <arg name="debug_prefix" default="" unless="$(arg debug)"/>
+
+  <arg name="fixed_frame_id" default="world"/>
+
+  <arg name="throttle" default="true"/>
+
+  <arg name="depth_image" default="/rs0r200/camera/depth/image_raw" unless="$(arg throttle)"/>
+  <arg name="depth_info" default="/rs0r200/camera/depth/camera_info" unless="$(arg throttle)"/>
+
+  <arg name="depth_image" default="/rs0r200/camera/depth_throttled2/image_raw" if="$(arg throttle)"/>
+  <arg name="depth_info" default="/rs0r200/camera/depth_throttled2/camera_info" if="$(arg throttle)"/>
+
+    <!-- xterm -e gdb -ex run - -args -->
+
+    <arg name="egocan_enabled" default="true"/>
+
+  <param name="/egocylinder/depth_to_egocylindrical_nodelet/height" value="128"/> <!--128-->
+  <param name="/egocylinder/depth_to_egocylindrical_nodelet/width" value="512"/> <!--512-->
+  <param name="/egocylinder/depth_to_egocylindrical_nodelet/can_width" value="128"/> <!--128-->
+
+  <env if="false" name="ROSCONSOLE_CONFIG_FILE" value="$(find nav_quadrotor)/data/benchmark_debugging.conf"/>
+  <!--<env name="ROSCONSOLE_CONFIG_FILE" value="$(find nav_quadrotor)/data/record_timing_data.conf"/>-->
+
+  <arg name="analysis_ranges" default="[1,2,3]"/>
+  <arg name="k" default="20"/>
+  <arg name="min_dist" default="5"/>
+
+
+  <arg name="conservative_inflation_radius" default="0.32"/>
+    <arg name="conservative_inflation_height" default="0.46"/>
+    <arg name="liberal_inflation_radius" default="0.04"/>
+<arg name="liberal_inflation_height" default="0.46"/>
+
+    <arg name="enable_visuals" default="true"/>
+    <arg name="enable_inflated_pointclouds" default="$(arg enable_visuals)"/>
+    <arg name="enable_projected_pointcloud" default="$(arg enable_visuals)"/>
+  <arg name="sanity_check" default="$(arg enable_visuals)"/>
+  <arg name="point_sampling" default="true"/>
+    <arg name="inflate_raw" default="$(arg enable_visuals)"/>
+
+  <group ns="egocylinder">
+    <arg name="ec_im" default="image"/>
+    <arg name="ec_info" default="egocylinder_info"/>
+
+    <arg name="conservative_inflated_image" default="conservative_inflated_image"/>
+    <arg name="liberal_inflated_image" default="liberal_inflated_image"/>
+
+    <node name="$(arg nodelet_manager)" pkg="nodelet" type="nodelet" args="manager" unless="$(arg use_provided_manager)" output="log"  launch-prefix="$(arg debug_prefix)" required="true"/>
+
+    <node name="egocylindrical_convolution_node" pkg="nav_quadrotor" type="endpoint_sampling.py" launch-prefix="" if="$(arg point_sampling)" required="true">
+        <!-- Currently, the node subscribes directly to the egocylinder topics-->
+        <!--<remap from="image" to="$(arg ec_im)"/>
+        <remap from="camera_info" to="$(arg ec_info)"/>-->
+        <rosparam param="analysis_ranges" subst_value="True">$(arg analysis_ranges)</rosparam>
+        <param name="non_min_suppression/k" value="$(arg k)"/>
+        <param name="non_min_suppression/min_dist" value="$(arg min_dist)"/>
+        <param name="viz" value="false"/>
+
+        <remap from="/nav_goal" to="/hummingbird/obstacle_avoidance_controller_node/current_goal"/>
+        <remap from="sampled_points" to="/candidate_waypoints"/>
+        <remap from="detailed_waypoints" to="detailed_candidate_waypoints"/>
+    </node>
+
+
+    <node name="costmap_visualizer_node" pkg="nav_quadrotor" type="costmap_visualizer.py" if="$(arg enable_visuals)"> <!--$(arg enable_visuals)-->
+        <remap from="camera_info" to="$(arg ec_info)"/>
+        <remap from="sampled_points" to="/candidate_waypoints"/>
+    </node>
+
+
+    <node name="depth_to_egocylindrical_nodelet" pkg="nodelet" type="nodelet" args="$(arg nodelet_mode) egocylindrical/egocylindrical_propagator_nodelet $(arg nodelet_manager)" unless="$(arg replay)" required="true">
+      <param name="image_in" value="$(arg depth_image)"/>
+      <param name="info_in" value="$(arg depth_info)"/>
+      <param name="points_out" value="data"/>
+      <param name="vfov" value="2.6"/>
+      <param name="filtered_points" value="filtered_points"/>
+      <param name="fixed_frame_id" value="$(arg fixed_frame_id)"/>
+      <param name="orientation_fixed_frame_id" value="rs0color"/>
+      <param name="origin_fixed_frame_id" value="rs0color"/>
+    </node>
+
+    <node name="egocylindrical_to_pointcloud_nodelet" pkg="nodelet" type="nodelet" args="$(arg nodelet_mode) egocylindrical/point_cloud_nodelet $(arg nodelet_manager)" >
+      <remap from="egocylindrical_points" to="data"/>
+      <remap from="cylindrical" to="points"/>
+    </node>
+
+    <node if="$(arg enable_projected_pointcloud)" name="egocylindrical_to_projected_pointcloud_nodelet" pkg="nodelet" type="nodelet" args="$(arg nodelet_mode) egocylindrical/projected_point_cloud_nodelet $(arg nodelet_manager)" >
+      <remap from="egocylindrical_points" to="data"/>
+    </node>
+
+    <node name="egocylindrical_to_range_image_nodelet" pkg="nodelet" type="nodelet" args="$(arg nodelet_mode) egocylindrical/range_image_nodelet $(arg nodelet_manager)" required="true">
+      <remap from="egocylindrical_points" to="data"/>
+      <param name="use_raw" value="False"/>
+      <param name="image_topic" value="$(arg ec_im)"/>
+      <param name="can_image_topic" value="can_image"/>
+    </node>
+
+    <node name="egocylindrical_to_raw_range_image_nodelet" pkg="nodelet" type="nodelet" args="$(arg nodelet_mode) egocylindrical/range_image_nodelet $(arg nodelet_manager)" required="true">
+      <remap from="egocylindrical_points" to="data"/>
+      <param name="use_raw" value="True"/>
+      <param name="image_topic" value="$(arg ec_im)_raw"/>
+      <param name="can_image_topic" value="can_image_raw"/>
+    </node>
+
+    <include file="$(find nav_quadrotor)/launch/add_inflators.launch">
+        <arg name="name" value="conservative"/>
+        <arg name="nodelet_manager" value="$(arg nodelet_manager)"/>
+        <arg name="ec_im" value="$(arg ec_im)"/>
+        <arg name="ec_info" value="$(arg ec_info)"/>
+        <arg name="can_image" value="can_image"/>
+        <arg name="inflate_raw" value="$(arg inflate_raw)"/>
+        <arg name="inflate_float" value="true"/>
+        <arg name="enable_point_publishing" value="$(arg enable_inflated_pointclouds)"/>
+        <arg name="inflation_radius" value="$(arg conservative_inflation_radius)"/>
+        <arg name="inflation_height" value="$(arg conservative_inflation_height)"/>
+        <arg name="nodelet_mode" value="$(arg nodelet_mode)"/>
+                    <arg name="egocan_enabled" value="$(arg egocan_enabled)"/>
+
+    </include>
+
+    <include file="$(find nav_quadrotor)/launch/add_inflators.launch">
+        <arg name="name" value="liberal"/>
+        <arg name="nodelet_manager" value="$(arg nodelet_manager)"/>
+        <arg name="ec_im" value="$(arg ec_im)"/>
+        <arg name="ec_info" value="$(arg ec_info)"/>
+        <arg name="can_image" value="can_image"/>
+        <arg name="inflate_raw" value="$(arg inflate_raw)"/>
+        <arg name="inflate_float" value="true"/>
+        <arg name="enable_point_publishing" value="$(arg enable_inflated_pointclouds)"/>
+        <arg name="inflation_radius" value="$(arg liberal_inflation_radius)"/>
+        <arg name="inflation_height" value="$(arg liberal_inflation_height)"/>
+        <arg name="nodelet_mode" value="$(arg nodelet_mode)"/>
+                    <arg name="egocan_enabled" value="$(arg egocan_enabled)"/>
+
+    </include>
+
+    <group if="$(arg sanity_check)">
+        <include file="$(find nav_quadrotor)/launch/add_sanity_check.launch">
+            <arg name="name" value="original"/>
+            <arg name="nodelet_manager" value="$(arg nodelet_manager)"/>
+            <arg name="ec_im" default="$(arg ec_im)"/>
+            <!--<arg name="can_image" value="can_image"/>-->
+            <arg name="can_image" value="nothing"/>
+            <arg name="ec_info" default="$(arg ec_info)"/>
+            <arg name="egocan_enabled" value="false"/> <!--"$(arg egocan_enabled)"/> -->
+          <arg name="nodelet_mode" value="$(arg nodelet_mode)"/>
+        </include>
+
+        <include file="$(find nav_quadrotor)/launch/add_sanity_check.launch">
+            <arg name="name" value="original_raw"/>
+            <arg name="nodelet_manager" value="$(arg nodelet_manager)"/>
+            <arg name="ec_im" default="$(arg ec_im)_raw"/>
+            <arg name="can_image" value="can_image_raw"/>
+            <arg name="ec_info" default="$(arg ec_info)"/>
+            <arg name="egocan_enabled" value="$(arg egocan_enabled)"/>
+          <arg name="nodelet_mode" value="$(arg nodelet_mode)"/>
+        </include>
+
+    </group>
+
+  </group>
+
+</launch>

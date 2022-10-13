@@ -1,0 +1,11 @@
+<robot name="hummingbird">
+    <link name="hummingbird/base_link">
+      <collision name="base_ellipsoid">
+        <geometry>
+          <box size="0.54 0.54 0.24"/>
+        </geometry>
+        <origin xyz="0 0 -0.085" rpy="0 0 0"/>
+      </collision>
+    </link>
+    
+</robot>

@@ -1,0 +1,65 @@
+<launch>
+    <arg name="nodelet_manager"/>
+    <arg name="nodelet_mode" default="load"/>
+    <arg name="ec_im" default="image"/>
+    <arg name="ec_info" default="egocylinder_info"/>
+    <arg name="can_image" default="can_image"/>
+    <arg name="inflate_raw" default="true"/>
+    <arg name="inflate_float" default="true"/>
+    <arg name="enable_point_publishing" default="true"/>
+    <arg name="egocan_enabled" default="true"/>
+
+    <arg name="inflation_radius" default="0.27"/>
+    <arg name="inflation_height" default="0.1"/>
+    <arg name="name" default="default"/>
+
+
+    <group if="$(arg inflate_float)">
+        <node name="$(arg name)_range_image_inflator_nodelet" pkg="nodelet" type="nodelet" args="$(arg nodelet_mode) egocylindrical/range_image_inflator_nodelet $(arg nodelet_manager)" required="true">
+            <remap from="egocylindrical_points" to="$(arg ec_info)"/>
+            <remap from="range_image" to="$(arg ec_im)"/>
+            <param name="image_topic" value="$(arg name)_inflated_image"/>
+            <param name="inflation_radius" value="$(arg inflation_radius)"/>
+            <param name="inflation_height" value="$(arg inflation_height)"/>
+        </node>
+
+        <node name="$(arg name)_can_image_inflator" pkg="egocylindrical" type="can_image_inflator_node" output="log" launch-prefix="" if="$(arg egocan_enabled)" required="true">
+            <remap from="egocylindrical_points" to="$(arg ec_info)"/>
+            <remap from="range_image" to="$(arg can_image)"/>
+            <param name="image_topic" value="$(arg name)_can_inflated_image"/>
+            <param name="inflation_radius" value="$(arg inflation_radius)"/>
+            <param name="inflation_height" value="$(arg inflation_height)"/>
+        </node>
+
+        <include file="$(find nav_quadrotor)/launch/add_sanity_check.launch" if="$(arg enable_point_publishing)">
+            <arg name="name" value="$(arg name)"/>
+            <arg name="nodelet_manager" value="$(arg nodelet_manager)"/>
+            <arg name="ec_im" value="$(arg name)_inflated_image"/>
+            <arg name="ec_info" value="$(arg ec_info)"/>
+            <arg name="can_image" value="$(arg name)_can_inflated_image"/>
+            <arg name="nodelet_mode" value="$(arg nodelet_mode)"/>
+            <arg name="egocan_enabled" value="$(arg egocan_enabled)"/>
+        </include>
+
+    </group>
+
+    <group if="$(arg inflate_raw)">
+        <node name="$(arg name)_raw_range_image_inflator_nodelet" pkg="nodelet" type="nodelet" args="$(arg nodelet_mode) egocylindrical/range_image_inflator_nodelet $(arg nodelet_manager)" required="true">
+            <remap from="egocylindrical_points" to="$(arg ec_info)"/>
+            <remap from="range_image" to="$(arg ec_im)_raw"/>
+            <param name="image_topic" value="$(arg name)_inflated_image_raw"/>
+            <param name="inflation_radius" value="$(arg inflation_radius)"/>
+            <param name="inflation_height" value="$(arg inflation_height)"/>
+        </node>
+
+        <include file="$(find nav_quadrotor)/launch/add_sanity_check.launch" if="$(arg enable_point_publishing)">
+            <arg name="name" value="$(arg name)_raw"/>
+            <arg name="nodelet_manager" value="$(arg nodelet_manager)"/>
+            <arg name="ec_im" default="$(arg name)_inflated_image"/>
+            <arg name="ec_info" default="$(arg ec_info)"/>
+            <arg name="nodelet_mode" value="$(arg nodelet_mode)"/>
+        </include>
+
+    </group>
+
+</launch>

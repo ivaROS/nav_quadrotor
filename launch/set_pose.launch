@@ -1,0 +1,16 @@
+<launch>
+    <arg name="x" default="0"/>
+    <arg name="y" default="0"/>
+    <arg name="z" default="2"/>
+    <arg name="theta" default="0"/>
+
+    <arg name="qw" value="$(eval cos(theta/2))"/>
+    <arg name="qz" value="$(eval sin(theta/2))"/>
+
+    <arg name="pose" value="pose: {position: {x: $(arg x), y: $(arg y), z: $(arg z)}, orientation: {z: $(arg qz), y: 0, x: 0, w: $(arg qw)}}"/>
+
+    <node name="commanded_pose_publisher" pkg="rostopic" type="rostopic" args="pub /hummingbird/command/pose geometry_msgs/PoseStamped '{header: {frame_id: 'world'}, $(arg pose)}'"/>
+
+    <node name="model_state_publisher" pkg="rosservice" type="rosservice" args="call /gazebo/set_model_state 'model_state: {model_name: 'hummingbird', $(arg pose), reference_frame: ''}'"/>
+
+</launch>

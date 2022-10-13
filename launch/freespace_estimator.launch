@@ -1,0 +1,74 @@
+<launch>
+  <arg name="debug" default="true"/>
+
+  <arg name="debug_prefix" value="" unless="$(arg debug)"/>
+  <arg name="debug_prefix" value="xterm -e gdb -ex run --args" if="$(arg debug)"/>
+
+  <arg name="mav_name" default="hummingbird"/>
+
+  <arg name="detailed_model_param" default="/simplified_robot_description"/>
+  <arg name="point_model_param" default="/point_robot_description"/>
+  <arg name="conservative_egocyl_model_param" default="/conservative_egocyl_robot_description"/>
+  <arg name="liberal_egocan_model_param" default="/egocan_robot_description1"/>
+  <arg name="conservative_egocan_model_param" default="/egocan_robot_description1"/>
+  <arg name="safety_inflated_model_param" default="/safety_inflated_robot_description"/>
+
+  <arg name="image" default="/egocylinder/image"/>
+
+  <arg name="info" default="/egocylinder/egocylinder_info"/>
+
+  <arg name="analysis_ranges" default="[1,2,3]"/>
+
+  <arg name="visuals" default="true"/>
+  <env name="ROSCONSOLE_CONFIG_FILE" value="$(find nav_quadrotor)/data/record_timing_data.conf"/>
+
+
+  <group ns="$(arg mav_name)">
+    <env name="GMON_OUT_PREFIX" value="obstacle" />
+
+    <node name="freespace_estimator_node" pkg="nav_quadrotor" type="freespace_estimator_node" output="log" required="true" launch-prefix="$(arg debug_prefix)" >
+      <rosparam param="freespace_estimator/analysis_ranges" subst_value="True">$(arg analysis_ranges)</rosparam>
+
+      <param name="fixed_frame_id" value="world"/>
+      <param name="planning_frame_id" value="world"/>
+      <param name="base_frame_id" value="hummingbird/base_link"/>
+      <param name="freespace_estimator/display_visuals" value="false"/>
+      <param name="freespace_estimator/publish_visuals" value="$(arg visuals)"/>
+      <!--Detailed collision checking-->
+      <param name="freespace_estimator/egocylindrical_image_topic" value="$(arg image)"/>
+      <param name="freespace_estimator/egocylindrical_info_topic" value="$(arg info)"/>
+      <param name="freespace_estimator/egocylindrical_image_collision_checker/robot_model/param_name" value="$(arg safety_inflated_model_param)"/>
+
+      <remap from="~freespace_estimator/nearest_depth_im" to="/egocylinder/nearest_depth_im"/>
+    </node>
+
+  </group>
+
+  <group ns="/egocylinder" if="$(arg visuals)">
+      <include file="$(find nav_quadrotor)/launch/add_sanity_check.launch">
+          <arg name="ec_im" value="nearest_depth_im"/>
+          <arg name="ec_info" value="$(arg info)"/>
+          <arg name="egocan_enabled" value="false"/>
+          <arg name="nodelet_manager" value="none"/>
+          <arg name="nodelet_mode" value="standalone"/>
+          <arg name="name" value="nearest_depth_im"/>
+      </include>
+
+      <node name="nd_image_viz" pkg="nav_quadrotor" type="egocylinder_trimmer.py">
+        <remap from="image_in" to="nearest_depth_im"/>
+        <remap from="image_out" to="nearest_depth_im_viz"/>
+      </node>
+
+      <include file="$(find nav_quadrotor)/launch/add_sanity_check.launch">
+          <arg name="ec_im" value="nearest_depth_im_viz"/>
+          <arg name="ec_info" value="$(arg info)"/>
+          <arg name="egocan_enabled" value="false"/>
+          <arg name="nodelet_manager" value="none"/>
+          <arg name="nodelet_mode" value="standalone"/>
+          <arg name="name" value="nearest_depth_im_viz"/>
+      </include>
+  </group>
+
+
+
+</launch>

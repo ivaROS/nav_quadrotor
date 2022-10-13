@@ -1,0 +1,56 @@
+<launch>
+  <arg name="gui" default="$(optenv GM_PARAM_GAZEBO_GUI true)"/>
+  <arg name="mav_name" default="hummingbird"/>
+  <arg name="world_name" default="empty"/>
+  <arg name="x0" default="0"/>
+  <arg name="map_file" default=""/>
+  <arg name="world_file_path" default="$(find nav_quadrotor)/worlds/$(arg world_name).world"/>
+
+  <env name="GAZEBO_MODEL_PATH" value="${GAZEBO_MODEL_PATH}:$(find rotors_gazebo)/models"/>
+  <!-- <env name="GAZEBO_MODEL_PATH" value="${GAZEBO_MODEL_PATH}:$(find ootp_simulator)/models"/> -->
+  <env name="GAZEBO_RESOURCE_PATH" value="${GAZEBO_RESOURCE_PATH}:$(find rotors_gazebo)/models"/>
+  <!-- <env name="GAZEBO_RESOURCE_PATH" value="${GAZEBO_RESOURCE_PATH}:$(find ootp_simulator)/models"/> -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(arg world_file_path)" />
+    <arg name="debug" value="false"/>
+    <arg name="paused" value="false"/>
+    <arg name="gui" value="$(arg gui)"/>
+    <arg name="verbose" value="true"/>
+    <arg name="server_required" value="true"/>
+  </include>
+
+  <group if="false">
+    <node name="gazebo" pkg="gazebo_ros" type="gzserver" output="screen"
+      args="--verbose $(arg world_file_path)" launch-prefix="xterm -e gdb --args"/>
+
+    <group if="$(arg gui)">
+      <node name="gazebo_gui" pkg="gazebo_ros" type="gzclient" respawn="false" output="screen" args=""/>
+    </group>
+  </group>
+
+
+  <node name="map" pkg="map_server" type="map_server" args="$(arg map_file)" required="true" unless="$(eval map_file=='')">
+    <param name="frame_id" value="world"/>
+  </node>
+
+  <group ns="$(arg mav_name)" if="false">
+    <include file="$(find nav_quadrotor)/launch/spawn_mav.launch">
+      <arg name="mav_name" value="$(arg mav_name)" />
+      <arg name="model" value="$(find nav_quadrotor)/urdf/mav_with_rs_sensor.gazebo" />
+      <arg name="x" value="$(arg x0)"/>
+      <arg name="y" value="0.0"/>
+    </include>
+    <node name="lee_position_controller_node" pkg="rotors_control" type="lee_position_controller_node" output="screen" if="false">
+      <rosparam command="load" file="$(find nav_quadrotor)/params/lee_controller_$(arg mav_name).yaml" />
+      <rosparam command="load" file="$(find nav_quadrotor)/params/$(arg mav_name)_rs.yaml" />
+      <remap from="odometry" to="odometry_sensor1/odometry" />
+    </node>
+
+    <!--<node name="initial_pose_publisher" pkg="rostopic" type="rostopic" args="pub /hummingbird/command/pose geometry_msgs/PoseStamped 'pose: {position: {x: $(arg x0)}}'"/> -->
+
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
+
+  </group>
+
+</launch>

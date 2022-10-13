@@ -1,0 +1,20 @@
+<launch>
+  <arg name="debug" default="false"/>
+  <arg name="analysis_ranges" default="[1,2]"/>
+
+  <include file="$(find nav_quadrotor)/launch/egocylindrical_convolution.launch">
+      <arg name="point_sampling" value="true"/>
+      <arg name="analysis_ranges" value="$(arg analysis_ranges)"/>
+      <arg name="k" value="10"/>
+      <arg name="min_dist" value="5"/>
+      <arg name="enable_visuals" value="true"/>
+      <arg name="replay" default="true"/>
+  </include>
+
+  <include file="$(find nav_quadrotor)/launch/convolution_test.launch">
+      <arg name="analysis_ranges" value="$(arg analysis_ranges)"/>
+      <arg name="debug" value="$(arg debug)"/>
+      <arg name="visuals" value="true"/>
+  </include>
+
+</launch>

@@ -1,0 +1,67 @@
+<?xml version="1.0"?>
+<!-- Based on mav_with_rs_sensor.gazebo -->
+<!--
+  Copyright 2017 Leo Campos, Intel - Labs GDC, Mexico
+  Copyright 2015 Fadri Furrer, ASL, ETH Zurich, Switzerland
+  Copyright 2015 Michael Burri, ASL, ETH Zurich, Switzerland
+  Copyright 2015 Mina Kamel, ASL, ETH Zurich, Switzerland
+  Copyright 2015 Janosch Nikolic, ASL, ETH Zurich, Switzerland
+  Copyright 2015 Markus Achtelik, ASL, ETH Zurich, Switzerland
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+
+<robot name="$(arg mav_name)" xmlns:xacro="http://ros.org/wiki/xacro">
+  <!-- Instantiate the mav with a generic odometry sensor. -->
+  <xacro:include filename="$(find rotors_description)/urdf/mav_generic_odometry_sensor.gazebo" />
+
+  <!-- Import macro for realsense-RS200 camera-->
+  <xacro:include filename="$(find nav_quadrotor)/urdf/realsense-RS200-wide-fov.macro.xacro"/>
+
+   <!-- Mount a rs200-sensor in front of the Firefly. -->
+    <xacro:realsense-rs200 prefix="rs0" parent="${namespace}/base_link">
+          <origin xyz="0.03 0.0 -0.07" rpy="0.0 0.0 0.0" />
+    </xacro:realsense-rs200>
+
+  <xacro:include filename="$(find nav_quadrotor)/urdf/hanging_cylinder.urdf.xacro" />
+
+  <xacro:hanging_cylinder parent="${namespace}/base_link"/>
+  <xacro:add_main_bumper parent="${namespace}/base_link"/>
+
+
+  <xacro:include filename="$(find nav_quadrotor)/urdf/mav_bumper_detection.urdf.xacro"/>
+
+
+  <xacro:macro name="temp_bumper" params="">
+      <gazebo reference="hummingbird/rotor_0">
+            <sensor name='hummingbird/rotor_0_collision_bumper0' type='contact'>
+                <always_on>true</always_on>
+                <contact>
+                  <collision>hummingbird/rotor_0::hummingbird/rotor_0_collision</collision>
+                </contact>
+                <update_rate> 5 </update_rate>
+                <plugin name="hummingbird/rotor_0_collision_bumper0" filename="libgazebo_ros_bumper.so">
+                  <bumperTopicName>hummingbird/rotor_0_bumper0</bumperTopicName>
+                  <frameName>world</frameName>
+                </plugin>
+            </sensor>
+      </gazebo>
+
+  </xacro:macro>
+
+
+  <!--<xacro:temp_bumper/>-->
+  <xacro:add_rotor_bumpers namespace="${namespace}"/>
+</robot>
+

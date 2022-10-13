@@ -1,0 +1,18 @@
+<robot name="hummingbird">
+    <link name="hummingbird/base_link">
+        <collision name="base">
+        <geometry>
+          <cylinder length="0.08" radius="0.27"/>
+        </geometry>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+      </collision>
+      <!--
+      <collision name="base2">
+        <geometry>
+          <box length="0.18" width="0.04" height="0.06"/>
+        </geometry>
+        <origin xyz="0 0 -0.04" rpy="0 0 0"/>
+      </collision>
+      -->
+    </link>
+</robot>

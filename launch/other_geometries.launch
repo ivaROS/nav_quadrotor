@@ -1,0 +1,18 @@
+<launch>
+    <arg name="compact" default="false"/>
+
+    <arg name="spherical_model" default="spherical_model"/>
+    <arg name="spherical_model_file" value="$(find xacro)/xacro '$(find nav_quadrotor)/urdf/simplified_collision_description/with_hanging_cylinder/spherical.urdf' --inorder" if="$(arg compact)"/>
+    <arg name="spherical_model_file" value="$(find xacro)/xacro '$(find nav_quadrotor)/urdf/simplified_collision_description/with_hanging_cylinder/spherical_naive.urdf' --inorder" unless="$(arg compact)"/>
+
+    <group ns="$(arg spherical_model)">
+        <param name="robot_description" command="$(arg spherical_model_file)"/>
+
+        <node name="spherical_robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher">
+          <!--  <remap from="robot_description" to="~/robot_description"/>
+            <param name="robot_description" command="$(arg spherical_model_file)"/> ->
+            -->
+        </node>
+    </group>
+
+</launch>

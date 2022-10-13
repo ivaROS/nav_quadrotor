@@ -1,0 +1,60 @@
+<launch>
+  <arg name="visuals" default="false"/>
+  <arg name="debug" default="false"/>
+  <arg name="analysis_ranges" default="[1,2]"/>
+  <env name="ROSCONSOLE_CONFIG_FILE" value="$(find nav_quadrotor)/data/record_timing_data.conf"/>
+  <arg name="rosbag_file" default="$(optenv GM_PARAM_ROSBAG_FILE)"/>
+
+  <include file="$(find nav_quadrotor)/launch/obstacle_avoidance_controller.launch">
+      <arg name="record" value="false"/>
+      <arg name="debug" value="$(arg debug)"/>
+  </include>
+
+  <include file="$(find nav_quadrotor)/launch/perception_pipeline.launch">
+      <arg name="point_sampling" value="true"/>
+      <arg name="analysis_ranges" value="$(arg analysis_ranges)"/>
+      <arg name="k" value="10"/>
+      <arg name="min_dist" value="5"/>
+      <arg name="enable_visuals" value="$(arg visuals)"/>
+  </include>
+
+  <include file="$(find nav_quadrotor)/launch/freespace_estimator.launch">
+      <arg name="analysis_ranges" value="$(arg analysis_ranges)"/>
+      <arg name="debug" value="$(arg debug)"/>
+      <arg name="visuals" value="$(arg visuals)"/>
+  </include>
+
+
+  <node if="$(eval rosbag_file!='')" name="rosbag_recorder" pkg="rosbag" type="record" args="--output-name=$(arg rosbag_file) --lz4
+    /tf /tf_static
+    /candidate_waypoints
+    /egocylinder/detailed_candidate_waypoints
+    /egocylinder/gap_sizes_markers
+    /hummingbird/obstacle_avoidance_controller_node/end_point_trajectory_source/resampled_candidate_waypoints
+    /hummingbird/freespace_estimator_node/freespace_estimator/convolved_projection
+    /hummingbird/obstacle_avoidance_controller_node/egocylindrical_image_cc_wrapper/egocylindrical_image_collision_checker/collisions
+    /hummingbird/obstacle_avoidance_controller_node/conservative_inflated_egocylindrical_image_cc_wrapper/egocylindrical_image_collision_checker/collisions
+    /hummingbird/obstacle_avoidance_controller_node/liberal_inflated_egocylindrical_image_cc_wrapper/egocylindrical_image_collision_checker/collisions
+    /hummingbird/obstacle_avoidance_controller_node/inflated_egocan_cc_wrapper1/egocan_collision_checker/collisions
+    /hummingbird/obstacle_avoidance_controller_node/inflated_egocan_cc_wrapper2/egocan_collision_checker/collisions
+    /hummingbird/remaining_trajectory /hummingbird/evaluated_trajectories
+    /hummingbird/ground_truth/odometry /move_base_simple/goal
+    /hummingbird/original_trajectories
+    /centroids
+    /rosout_agg
+    /hummingbird/obstacle_avoidance_controller_node/current_goal
+    /hummingbird/joint_state
+    /hummingbird/obstacle_avoidance_controller_node/end_point_trajectory_source/transformed_candidate_waypoints
+    /egocylinder/cur_path_goal
+    /egocylinder/data
+    /egocylinder/egocylinder_info
+    /hummingbird/selected_trajectory
+    /hummingbird/remaining_trajectory
+    /hummingbird/obstacle_avoidance_controller_node/potentials_planner/potential
+    /hummingbird/obstacle_avoidance_controller_node/potentials_planner/plan
+    /hummingbird/bumper
+    /rs0r200/camera/depth_throttled/camera_info
+    /rs0r200/camera/depth_throttled/image_raw
+    "/>
+
+</launch>

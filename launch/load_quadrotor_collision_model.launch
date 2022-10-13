@@ -1,0 +1,44 @@
+<launch>
+
+  <arg name="detailed_model" default="simplified_robot_description"/>
+  <arg name="point_model" default="point_robot_description"/>
+  <arg name="version" default="detailed"/>
+  <arg name="basic" default="false"/>
+
+  <group if="$(arg basic)">
+      <arg name="detailed_urdf_file" value="$(find xacro)/xacro '$(find nav_quadrotor)/urdf/simplified_collision_description/hummingbird.urdf' --inorder"/>
+      <arg name="inflated_urdf_file" value="$(find xacro)/xacro '$(find nav_quadrotor)/urdf/point_model/hummingbird.urdf' --inorder"/>
+      <arg name="liberal_egocan_inflated_urdf_file" value="$(find xacro)/xacro '$(find nav_quadrotor)/urdf/inflated_egocan/hummingbird.urdf' --inorder"/>
+      <arg name="basic_egocan_inflated_urdf_file" value="$(find xacro)/xacro '$(find nav_quadrotor)/urdf/inflated_egocan/hummingbird.urdf' --inorder"/>
+
+      <param name="$(arg detailed_model)" command="$(arg detailed_urdf_file)" />
+      <param name="$(arg point_model)" command="$(arg inflated_urdf_file)" />
+      <param name="egocan_robot_description1" command="$(arg basic_egocan_inflated_urdf_file)"/>
+  </group>
+
+  <group unless="$(arg basic)">
+      <arg name="detailed_urdf_file" value="$(find xacro)/xacro '$(find nav_quadrotor)/urdf/simplified_collision_description/with_hanging_cylinder/$(arg version).urdf' --inorder"/>
+      <arg name="inflated_urdf_file" value="$(find xacro)/xacro '$(find nav_quadrotor)/urdf/point_model/hummingbird.urdf' --inorder"/>
+      <arg name="liberal_egocan_inflated_urdf_file" value="$(find xacro)/xacro '$(find nav_quadrotor)/urdf/inflated_egocan/hummingbird.urdf' --inorder"/>
+      <arg name="basic_egocan_inflated_urdf_file" value="$(find xacro)/xacro '$(find nav_quadrotor)/urdf/inflated_egocan/hummingbird.urdf' --inorder"/>
+
+      <arg name="conservative_egocyl_urdf_file" value="$(find xacro)/xacro '$(find nav_quadrotor)/urdf/point_model/conservative.urdf' --inorder"/>
+      <param name="/conservative_egocyl_robot_description" command="$(arg conservative_egocyl_urdf_file)"/>
+
+
+       <arg name="liberal_urdf_file" value="$(find xacro)/xacro '$(find nav_quadrotor)/urdf/simplified_collision_description/with_hanging_cylinder/liberal.urdf' --inorder"/>
+        <param name="/liberal_viz" command="$(arg liberal_urdf_file)"/>
+        <arg name="conservative_urdf_file" value="$(find xacro)/xacro '$(find nav_quadrotor)/urdf/simplified_collision_description/with_hanging_cylinder/conservative.urdf' --inorder"/>
+        <param name="/conservative_viz" command="$(arg conservative_urdf_file)"/>
+
+      <param name="$(arg detailed_model)" command="$(arg detailed_urdf_file)" />
+      <param name="$(arg point_model)" command="$(arg inflated_urdf_file)" />
+      <param name="egocan_robot_description1" command="$(arg basic_egocan_inflated_urdf_file)"/>
+
+      <arg name="safety_inflated_urdf_file" value="$(find xacro)/xacro '$(find nav_quadrotor)/urdf/simplified_collision_description/with_hanging_cylinder/safety_inflated.urdf' --inorder"/>
+      <param name="/safety_inflated_robot_description" command="$(arg safety_inflated_urdf_file)"/>
+  </group>
+
+
+
+</launch>

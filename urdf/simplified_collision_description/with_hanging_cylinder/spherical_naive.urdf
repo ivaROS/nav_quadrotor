@@ -1,0 +1,25 @@
+<robot name="hummingbird_sphere">
+    <link name="hummingbird/base_link">
+    </link>
+
+    <link name="hummingbird/naive_spherical_model_link">
+      <collision name="base">
+        <geometry>
+          <sphere radius="0.50"/>
+        </geometry>
+      </collision>
+      <visual>
+        <geometry>
+          <sphere radius="0.50"/>
+        </geometry>
+        <!--<material name="red"/>-->
+      </visual>
+    </link>
+
+    <joint name="hummingbird/spherical_model_joint" type="fixed">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <parent link="hummingbird/base_link"/>
+        <child link="hummingbird/naive_spherical_model_link"/>
+    </joint>
+
+</robot>

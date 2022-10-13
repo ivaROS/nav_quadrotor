@@ -1,0 +1,23 @@
+<launch>
+  <arg name="mav_name" default="hummingbird"/>
+  <arg name="world_name" default="hallway_obstacle_course"/>
+  <arg name="world_camera" default="false"/>
+
+  <arg name="map_file" default="$(find nav_quadrotor)/maps/30x5_hall.yaml"/>
+
+  <include file="$(find nav_quadrotor)/launch/gazebo_empty.launch">
+    <arg name="world_name" value="$(arg world_name)"/>
+    <arg name="map_file" value="$(arg map_file)"/>
+  </include>
+
+  <include file="$(find nav_quadrotor)/launch/gazebo_camera.launch" if="$(arg world_camera)">
+    <arg name="model_file" value="$(find nav_quadrotor)/urdf/gazebo_cameras/hallway_camera.sdf"/>
+    <arg name="roll" value="0"/>
+    <arg name="yaw" value="0"/>
+    <arg name="pitch" value="1.57"/>
+    <arg name="x" value="12.5"/>
+    <arg name="y" value="0"/>
+    <arg name="z" value="30"/>
+  </include>
+
+</launch>

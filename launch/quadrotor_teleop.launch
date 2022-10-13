@@ -1,0 +1,8 @@
+<launch>
+  <node pkg="nav_quadrotor" type="quadrotor_teleop.py" name="quadrotor_teleop_keyboard"  output="screen" ns="hummingbird">
+    <param name="scale_linear" value="0.5" type="double"/>
+    <param name="scale_angular" value="1.5" type="double"/>
+    <remap from="quadrotor_teleop_keyboard/cmd_pose" to="command/pose"/>
+    <remap from="quadrotor_teleop_keyboard/cur_pose" to="ground_truth/odometry"/>
+  </node>
+</launch>
