@@ -5,7 +5,6 @@ from builtins import str
 from builtins import range
 from builtins import object
 from nav_scripts.gazebo_master import MultiMasterCoordinator
-from nav_scripts.testing_scenarios import TestingScenario, TestingScenarios, GeneralScenario
 from nav_scripts.controller_launcher import ControllerLauncher
 from nav_scripts.ros_launcher_helper import RosEnv, GazeboLauncher, RoscoreLauncher
 from nav_scripts.gazebo_driver import GazeboDriver
@@ -13,10 +12,10 @@ from nav_scripts.movebase_driver import run_test
 import nav_quadrotor.scenarios
 import nav_quadrotor.quadrotor_impl
 import rospy
-from geometry_msgs.msg import PoseStamped
 import time
-import csv
-import math
+import random
+import datetime
+import os
 from pathlib import Path
 import rospkg
 rospack = rospkg.RosPack()
@@ -27,30 +26,33 @@ quadrotor = rospack.get_path("nav_quadrotor") + "/launch/spawn_mav_hanging_cylin
 ControllerLauncher.registerController(name="aerial_pips", filepath=rospack.get_path("nav_quadrotor") + "/launch/aerial_pips.launch")
 
 
-def add_rosbag_key(task):
-    import random
-    import datetime
-    import os
+data_dir = "/tmp/aerial_pips_simulation_data"
 
-    #for key in ['scenario', 'controller', 'seed',]
-    task_str = str(datetime.datetime.now()) + '_' + str('%010x' % random.randrange(16 ** 10)) + ".bag"
+def rosbag_key_getter(data_dir=None):
+    if data_dir is not None:
+        rosbag_dir = os.path.join(data_dir, "rosbags")
+        Path(rosbag_dir).mkdir(parents=True, exist_ok=True)
 
-    rosbag_path = "/tmp/simulation_data/rosbags/"
-    Path(rosbag_path).mkdir(parents=True, exist_ok=True)
-    rosbag_path = os.path.join(rosbag_path, task_str)
-    rosbag_path = "'" + os.path.expanduser(rosbag_path) + "'"
+        def add_rosbag_key(task):
+            task_str = str(datetime.datetime.now()) + '_' + str('%010x' % random.randrange(16 ** 10)) + ".bag"
 
-    if 'controller_args' not in task:
-        task['controller_args'] = {}
+            rosbag_path = os.path.join(rosbag_dir, task_str)
+            rosbag_path = "'" + os.path.expanduser(rosbag_path) + "'"
 
-    task['controller_args']['rosbag_file'] = rosbag_path
+            if 'controller_args' not in task:
+                task['controller_args'] = {}
+
+            task['controller_args']['rosbag_file'] = rosbag_path
+
+        return add_rosbag_key
+    else:
+        return lambda t : None
 
 
-
-def multi_test_runner(tasks, num_masters=1, save_results=False, use_existing_roscore=False):
+def multi_test_runner(tasks, **kwargs):
 
     start_time = time.time()
-    master = MultiMasterCoordinator(num_masters=num_masters,save_results=save_results, use_existing_roscore=use_existing_roscore)
+    master = MultiMasterCoordinator(**kwargs)
     master.fieldnames.extend(['repeat', 'rosbag_file'])
     master.start()
 
@@ -62,11 +64,11 @@ def multi_test_runner(tasks, num_masters=1, save_results=False, use_existing_ros
 
 
 
-def get_scenario_tasks(scenarios, num, show_gazebo, record_rosbag, extra_args=None):
+def get_scenario_tasks(scenarios, num, show_gazebo, record_rosbag, data_dir, extra_args=None):
     if not isinstance(scenarios, list):
         scenarios = [scenarios]
 
-
+    add_rosbag_key = rosbag_key_getter(data_dir=data_dir)
     def getTasks():
         controller_freq = 5
         for scenario in scenarios:
@@ -86,11 +88,13 @@ def get_scenario_tasks(scenarios, num, show_gazebo, record_rosbag, extra_args=No
 
 
 if __name__ == "__main__":
+    data_dir = "/tmp/aerial_pips_simulation_data"
     record_rosbag = True
     show_gazebo = True
-    num = 5
+    num = 20
     scenarios = ['hall_obstacle_course', 'demo_gap']
-    runner = multi_test_runner(tasks=get_scenario_tasks(scenarios=scenarios, num=num, show_gazebo=show_gazebo, record_rosbag=record_rosbag)(), num_masters=1, save_results=True, use_existing_roscore=False)
+    multi_test_runner(tasks=get_scenario_tasks(scenarios=scenarios, num=num, show_gazebo=show_gazebo, record_rosbag=record_rosbag,
+                                                        data_dir=data_dir)(), num_masters=1, save_results=True, use_existing_roscore=False, data_dir=data_dir)
 
 
 

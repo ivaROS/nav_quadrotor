@@ -1,10 +1,14 @@
-import os.path
+#!/usr/bin/env python3
 
-import rospy
+import os.path
+import glob
+import itertools
+
 import rosbag
 import rospy
 from nav_scripts.result_analyzer import ResultAnalyzer, getValuesForKeys, filter as filter_results
-import pandas as pd
+from pathlib import Path
+import multiprocessing as mp
 
 class LogParsingInterface(object):
     pass
@@ -77,29 +81,28 @@ class LogMeasurementDefinition(object):
 
 def get_measurement_definitions():
     meas = [
-        #Measurement(location="/home/justin/catkin_ws/src/egocylindrical/src/egocylindrical_propagator.cpp:EgoCylindricalPropagator::update:138", prestring="Adding depth image took ", unit="ms"),
-        LogMeasurementDefinition(name="ec_update", location="/home/justin/catkin_ws/src/egocylindrical/src/egocylindrical_propagator.cpp:EgoCylindricalPropagator::update:193", prestring="Total time: ", unit="ms"),
-        LogMeasurementDefinition(name="ec_2_im", node="/egocylinder/egocylindrical_to_range_image_nodelet", location="/home/justin/catkin_ws/src/egocylindrical/src/range_image_generator.cpp:EgoCylinderRangeImageGenerator::ecPointsCB:106", prestring="Generating egocylindrical range image took ", unit="ms"),
+        LogMeasurementDefinition(name="ec_update", location="egocylindrical/src/egocylindrical_propagator.cpp:EgoCylindricalPropagator::update:193", prestring="Total time: ", unit="ms"),
+        LogMeasurementDefinition(name="ec_2_im", node="/egocylinder/egocylindrical_to_range_image_nodelet", location="egocylindrical/src/range_image_generator.cpp:EgoCylinderRangeImageGenerator::ecPointsCB:106", prestring="Generating egocylindrical range image took ", unit="ms"),
 
-        LogMeasurementDefinition(name="cons_can_infl", node="/egocylinder/conservative_can_image_inflator", location="/home/justin/catkin_ws/src/egocylindrical/src/can_image_inflator_generator.cpp:CanImageInflatorGenerator::imgCB:329", prestring="Inflating egocan lid image by {0.32x0.23} took ", unit="ms"),
-        LogMeasurementDefinition(name="cons_img_infl", node="/egocylinder/conservative_range_image_inflator_nodelet", location="/home/justin/catkin_ws/src/egocylindrical/src/range_image_inflator_generator.cpp:RangeImageInflatorGenerator::imgCB:407", prestring="Inflating range image by {0.32x0.23} took ", unit="ms"),
+        LogMeasurementDefinition(name="cons_can_infl", node="/egocylinder/conservative_can_image_inflator", location="egocylindrical/src/can_image_inflator_generator.cpp:CanImageInflatorGenerator::imgCB:329", prestring="Inflating egocan lid image by {0.32x0.23} took ", unit="ms"),
+        LogMeasurementDefinition(name="cons_img_infl", node="/egocylinder/conservative_range_image_inflator_nodelet", location="egocylindrical/src/range_image_inflator_generator.cpp:RangeImageInflatorGenerator::imgCB:407", prestring="Inflating range image by {0.32x0.23} took ", unit="ms"),
 
-        LogMeasurementDefinition(name="lib_can_infl", node="/egocylinder/liberal_can_image_inflator", location="/home/justin/catkin_ws/src/egocylindrical/src/can_image_inflator_generator.cpp:CanImageInflatorGenerator::imgCB:329", prestring="Inflating egocan lid image by {0.04x0.23} took ", unit="ms"),
-        LogMeasurementDefinition(name="lib_img_infl", node="/egocylinder/liberal_range_image_inflator_nodelet", location="/home/justin/catkin_ws/src/egocylindrical/src/range_image_inflator_generator.cpp:RangeImageInflatorGenerator::imgCB:407", prestring="Inflating range image by {0.04x0.23} took ", unit="ms"),
+        LogMeasurementDefinition(name="lib_can_infl", node="/egocylinder/liberal_can_image_inflator", location="egocylindrical/src/can_image_inflator_generator.cpp:CanImageInflatorGenerator::imgCB:329", prestring="Inflating egocan lid image by {0.04x0.23} took ", unit="ms"),
+        LogMeasurementDefinition(name="lib_img_infl", node="/egocylinder/liberal_range_image_inflator_nodelet", location="egocylindrical/src/range_image_inflator_generator.cpp:RangeImageInflatorGenerator::imgCB:407", prestring="Inflating range image by {0.04x0.23} took ", unit="ms"),
 
         LogMeasurementDefinition(name="cm_sample", location="endpoint_sampling.py:PointSamplingNode.image_callback:2231", prestring="Waypoint sampling took ", unit="s"),
 
-        LogMeasurementDefinition(name="proj_conv", location="/home/justin/catkin_ws/src/nav_quadrotor/src/freespace_estimator.cpp:update:623", prestring="Total processing time: ", unit="ms"),
+        LogMeasurementDefinition(name="proj_conv", location="nav_quadrotor/src/freespace_estimator.cpp:update:623", prestring="Total processing time: ", unit="ms"),
         LogMeasurementDefinition(name="fastmarch",
-                                 location="/home/justin/catkin_ws/src/nav_quadrotor/src/freespace_estimator.cpp:update:596",
+                                 location="nav_quadrotor/src/freespace_estimator.cpp:update:596",
                                  prestring="Fastmarch time: ", unit="ms"),
-        LogMeasurementDefinition(name="nd_fm", location="/home/justin/catkin_ws/src/nav_quadrotor/src/freespace_estimator.cpp:update:617", prestring="Nearest Depths processing time: ", unit="ms"),
+        LogMeasurementDefinition(name="nd_fm", location="nav_quadrotor/src/freespace_estimator.cpp:update:617", prestring="Nearest Depths processing time: ", unit="ms"),
 
-        LogMeasurementDefinition(name="total_planning", location="/home/justin/catkin_ws/src/trajectory_based_nav/include/trajectory_based_nav/general_nav_impl.h:PlanningData trajectory_based_nav::GeneralNavImpl<T>::Plan:405", prestring="Total: ", unit="ms"),
+        LogMeasurementDefinition(name="total_planning", location="trajectory_based_nav/include/trajectory_based_nav/general_nav_impl.h:PlanningData trajectory_based_nav::GeneralNavImpl<T>::Plan:405", prestring="Total: ", unit="ms"),
         LogMeasurementDefinition(name="just_checking",
-                                 location="/home/justin/catkin_ws/src/trajectory_based_nav/include/trajectory_based_nav/general_nav_impl.h:PlanningData trajectory_based_nav::GeneralNavImpl<T>::Plan:412",
+                                 location="trajectory_based_nav/include/trajectory_based_nav/general_nav_impl.h:PlanningData trajectory_based_nav::GeneralNavImpl<T>::Plan:412",
                                  prestring="STATISTICS: {\"total_planning_time\"", unit="us"),
-        LogMeasurementDefinition(name="", location="/home/justin/catkin_ws/src/nav_quadrotor/src/multi_level_trajectory_verifier.cpp:MultiLevelTrajectoryVerifier::collisionCheckPose:133")
+        LogMeasurementDefinition(name="", location="nav_quadrotor/src/multi_level_trajectory_verifier.cpp:MultiLevelTrajectoryVerifier::collisionCheckPose:133")
     ]
     return meas
 
@@ -107,46 +110,27 @@ from collections import defaultdict
 import re
 import numpy as np
 
-class LoggingParser(object):
+
+class DefinitionMatcher:
+
     def __init__(self, definitions):
-        self.line_ll = defaultdict(list)
-
+        self.func_map = {}
         for d in definitions:
-            self.line_ll[d.get_signature()].append(d)
+            f = d.function
+            try:
+                self.func_map[f].append(d)
+            except KeyError:
+                self.func_map[f] = [d]
 
-        self.definitions = {d.name : d for d in definitions}
-        self.measurements = defaultdict(list)
+    def get_matches(self, msg):
+        try:
+            func_matches = self.func_map[msg.function]
+        except KeyError:
+            return []
 
-        numeric_const_pattern = '[-+]? (?: (?: \d* \. \d+ ) | (?: \d+ \.? ) )(?: [Ee] [+-]? \d+ ) ?'
-        self.rx = re.compile(numeric_const_pattern, re.VERBOSE)
+        file_matches = [d for d in func_matches if msg.file.endswith(d.file)]
+        return file_matches
 
-    def add_msg(self, msg):
-        def get_signature(m):
-            return m.file + m.function
-
-        matching_lines = self.line_ll[get_signature(msg)]
-        for ml in matching_lines:
-            if (ml.node is not None and ml.node !=msg.name): #ml.file != msg.file or
-                continue
-            else:
-                meas_list = self.measurements[ml.name]
-
-                #Parse out the value of interest
-                match = self.rx.search(string=msg.msg, pos=len(ml.prestring))
-                if match:
-                    startp, endp = match.span()
-                    m = match.string[startp:endp]
-                    #print(ml.name + ": " + m)
-                    v = ml.datatype(m)
-                    meas_list.append(v)
-                    pass
-
-                    return True
-                else:
-                    continue
-
-
-        return False
 
 import matplotlib.pyplot as plt
 from matplotlib.ticker import PercentFormatter
@@ -155,7 +139,7 @@ class TimingLoader(object):
 
     def __init__(self):
         patterns = get_measurement_definitions()
-        self.parser = LoggingParser2(definitions=patterns)
+        self.parser = LoggingParser(definitions=patterns)
 
 
 
@@ -389,37 +373,22 @@ class OdometryTopicAnalyzer(RosbagTopicAnalyzer):
 
 
 
-class LoggingParser2(object):
+class LoggingParser(object):
     def __init__(self, definitions):
-        self.line_ll = defaultdict(list)
-
-        for d in definitions:
-            self.line_ll[d.get_signature()].append(d)
-
-        self.definitions = {d.name : d for d in definitions}
+        self.matcher = DefinitionMatcher(definitions=definitions)
 
         numeric_const_pattern = '[-+]? (?: (?: \d* \. \d+ ) | (?: \d+ \.? ) )(?: [Ee] [+-]? \d+ ) ?'
         self.rx = re.compile(numeric_const_pattern, re.VERBOSE)
 
     def add_msg(self, msg):
-        def get_signature(m):
-            return m.file + m.function
-
-        #if msg.line == '412' or '"planned":false' in msg.msg:
-        #    pass
-        #    print("Might be target")
-
         #Get list of definitions matching msg
-        definition_signature_matches = self.line_ll[get_signature(msg)]
+        definition_signature_matches = self.matcher.get_matches(msg=msg)
         search_matches = {}
 
         for mdef in definition_signature_matches:
             if mdef.node is not None and mdef.node !=msg.name:
                 continue
             else:
-                #meas_list = self.measurements[mdef.name]
-
-                # Parse out the value of interest
                 # Parse out the value of interest
                 if msg.msg.startswith(mdef.prestring):
                     match = self.rx.search(string=msg.msg, pos=len(mdef.prestring))
@@ -475,7 +444,7 @@ class StatisticsAnalyzer(RosbagTopicAnalyzer):
         self.pta = planning_times_analyzer
 
         patterns = get_measurement_definitions()
-        self.parser = LoggingParser2(definitions=patterns)
+        self.parser = LoggingParser(definitions=patterns)
 
         self.c = 0
         self.w = 0
@@ -952,12 +921,12 @@ class CombinedResultAnalyzer(object):
 
 
 def get_pickled_file_path(filepath):
-    import os
-
-    #pickled_path = os.path.join(os.path.dirname(filepath), "cached", os.path.basename(filepath) + ".pickled")
-    pickled_path = os.path.join(os.path.dirname(filepath), "cached", os.path.splitext(os.path.basename(filepath))[0] + ".pickled")
+    cache_dir = os.path.join(os.path.dirname(filepath), "cached")
+    pickled_path = os.path.join(cache_dir, os.path.splitext(os.path.basename(filepath))[0] + ".pickled")
+    Path(cache_dir).mkdir(parents=True, exist_ok=True)
 
     return pickled_path
+
 
 def preprocess_result(result, force=False):
     import os
@@ -1004,7 +973,6 @@ def preprocess_result(result, force=False):
 
 
 def import_result(result):
-    import os
 
     if 'rosbag_file' in result:
 
@@ -1035,7 +1003,6 @@ def convert_to_measurements(results):
     pass
 
 
-import itertools
 
 class IndependentBagAnalyzer(CombinedResultAnalyzer):
 
@@ -1060,13 +1027,10 @@ class IndependentBagAnalyzer(CombinedResultAnalyzer):
                 #    pass
 
         if process_files:
-            import multiprocessing as mp
-
             if single_thread:
                 itertools.starmap(preprocess_result, zip(results, itertools.repeat(force)))
             else:
                 num_cores = min(mp.cpu_count() + 4, len(results))
-                #num_cores = 1
                 with mp.Pool(num_cores) as pool:
                     pool.starmap(preprocess_result, zip(results, itertools.repeat(force)), 1)
 
@@ -1083,53 +1047,6 @@ class IndependentBagAnalyzer(CombinedResultAnalyzer):
         self.process_data()
 
 
-def analyze2(reload=False):
-    result_file =  '/home/justin/simulation_data/results_2022-03-24 14:21:54.732180'
-    bag_file = '/home/justin/simulation_data/iros2022/arxiv/timing_all_2022-03-24-14-22-01.bag' # '/home/justin/simulation_data/iros2022/barrier/demo_gap_all_2022-02-27-18-15-27.bag'
-    pickled = '/home/justin/simulation_data/iros2022/arxiv/6timing_all_2022-03-24-14-22-01.pickle'
-
-    a = CombinedResultAnalyzer()
-    if reload:
-        a.analyze(result_file=result_file, bag_file=bag_file)
-        a.export_data(filepath=pickled)
-    else:
-        a.load_data(filepath=pickled)
-        a.process_data()
-    pass
-    print("Done!")
-
-
-def analyze3(reload=False):
-    bag_file = '/home/justin/.ros/run_2022-04-07-18-50-38.bag'
-    pickled = '/home/justin/simulation_data/iros2022/arxiv/run_2022-04-07-18-50-38.pickle'
-    result = {'result': 'SUCCEEDED', 'time': '168600000000', 'path_length': '39.451955673496805', 'end_pose': 'NONE',
-     'total_rotation': '26.035541316937525', 'scenario':'clinic', 'seed':'0'}
-    a = CombinedResultAnalyzer()
-    if reload:
-        a.analyze(results=[result], bag_file=bag_file)
-        a.export_data(filepath=pickled)
-    else:
-        a.load_data(filepath=pickled)
-        a.process_data()
-    pass
-    print("Done!")
-
-
-def analyze4(reload=False):
-    results_file = '/home/justin/simulation_data/results_2022-04-08 02:20:05.681675'
-    pickled = '/home/justin/simulation_data/cached/results_2022-04-08 02:20:05.681675.pickle'
-    analyzer = IndependentBagAnalyzer()
-    if reload:
-        analyzer.analyze(result_file=results_file)
-        analyzer.export_data(filepath=pickled)
-    else:
-        analyzer.load_data(filepath=pickled)
-        analyzer.process_data()
-    pass
-    print("Done!")
-
-
-
 def generate_table(results):
     replacements = {'result': {'BUMPER_COLLISION': "BC", 'ABORTED': "AB", "TIMED_OUT": "TO", "SUCCEEDED": "SS"},
                     'global_potential_weight': 'WEIGHT', 'min_obstacle_spacing': 'spacing',
@@ -1140,41 +1057,30 @@ def generate_table(results):
     a.generateGenericTable(independent=['scenario'], dependent='result', replacements=replacements)
 
 
-def analyze5(reload=False):
-    results_file = '/home/justin/simulation_data/results_2022-04-08 02:20:05.681675' #
-    results_file = '/home/justin/simulation_data/results_2022-05-30 01:36:19.386958'
-    results_file = '/home/justin/simulation_data/results_2022-05-31 03:02:25.501781'
-    results_file = '/home/justin/simulation_data/results_2022-05-31 19:51:50.946400' #Current results
-    #results_file = '/home/justin/simulation_data/results_2022-06-08 02:12:33.072331' #with inflated 'detailed' and conservative models
-    #results_file = '/home/justin/simulation_data/results_2022-06-09 01:11:46.328783' #same conditions as previous
-    #results_file = '/home/justin/simulation_data/results_2022-06-10 00:36:42.597726' #fix goal cost function; change fs_thresh from 100 to 20; shrank base collision model height
-    #results_file = '/home/justin/simulation_data/results_2022-06-10 12:36:19.682222' #Fixed goal, but back to original fs_thresh and inflation sizes
-    results_file = '/home/justin/simulation_data/results_2022-06-10 20:09:18.058491' #reenabled safety inflation
-    results_file = '/home/justin/simulation_data/results_2022-06-11 12:27:17.423103' #slightly increase vertical model size/inflation
-    results_file = '/home/justin/simulation_data/results_2022-06-11 20:51:44.099298' #more gentle curves (clinic only)
-    #results_file = '/home/justin/simulation_data/results_2022-06-11 23:40:32.445761' #repeat but with all scenarios (failed to run)
-    results_file = '/home/justin/simulation_data/results_2022-06-12 07:23:49.580584' #repeat but with all scenarios
-    results_file = '/home/justin/simulation_data/results_2022-06-13 00:13:11.833045'
+##Based on code from https://fabianlee.org/2021/11/11/python-find-the-most-recently-modified-file-matching-a-pattern/
+def get_latest_file(data_dir):
+    # get list of files that matches pattern
+    pattern = os.path.join(data_dir, "results_*")
+    files = list(filter(os.path.isfile, glob.glob(pattern)))
 
-    ##For icra2023
-    results_file = '/home/justin/simulation_data/results_2022-09-10 23:59:28.345417' #50 runs in each of 3 worlds; local goal + sampled waypoints + local search
-    results_file = '/home/justin/simulation_data/results_2022-09-11 14:51:30.217199' #fewer runs but w/ rosbag recorded
-    results_file = '/home/justin/simulation_data/results_2022-09-12 02:50:09.834467' #full set of 50 each, w/o gap-trajectory-commitment
-    results_file = '/home/justin/simulation_data/results_2022-09-13 01:10:57.510490' #same, but with resampled waypoint trajectories (5x5 grid of trajectories for each original waypoint)
-    #results_file = '/home/justin/simulation_data/results_2022-09-13 19:46:08.883240' #simplified hall, with only collision-free resampled points used
-    #results_file = '/home/justin/simulation_data/results_2022-09-14 14:28:02.051699' #Same, but without the extra local search trajectories
-    results_file = '/home/justin/simulation_data/results_2022-09-14 18:30:20.279378' #Same, but replacing original waypoints with the center of collision free square of resampled points
-    results_file = '/home/justin/simulation_data/results_2022-09-14 23:17:03.986342' #Barrier world experments
-    results_file = '/home/justin/simulation_data/results_2022-09-15 01:51:39.237093' #obstacle course + barrier world
+    # sort by modified time
+    files.sort(key=lambda x: os.path.getmtime(x))
 
-    if False:
-        file = open(file="/home/justin/simulation_data/rosbags/cached/2022-06-08 02:12:34.081297_663a3da7bb.pickled",
-                    mode='rb')
-        import pickle
-        test = pickle.load(file=file)
-        return
+    # get last item in list
+    lastfile = files[-1]
 
-    reload = False
+    print("Most recent file matching {}: {}".format(pattern, lastfile))
+    return lastfile
+
+
+def analyze(data_dir, results_file=None, reload=False):
+    if results_file is None:
+        try:
+            results_file = get_latest_file(data_dir=data_dir)
+        except IndexError:
+            print("Error! No matching files found!")
+            raise
+
     details = True
 
     if details:
@@ -1194,86 +1100,8 @@ def analyze5(reload=False):
 
 
 
-
-
-def analyze(file):
-    with rosbag.Bag(f=file, mode="r") as bag:
-        print("Searching for run start times...")
-        rst = RunStartTimesFinder()
-        rst.analyze_bag(bag=bag)
-
-        print("Searching for collision times...")
-        cst = CollisionFinder()
-        cst.analyze_bag(bag=bag)
-
-
-from nav_scripts.result_analyzer import ResultAnalyzer
 if __name__ == "__main__":
-    #rospy.init_node('timing_result_analyzer')
-
-    #file = '/home/justin/simulation_data/iros2022/clinic/9/clinic_9_2022-02-26-19-57-54.bag'
-
-    def get_stats(scenario=None, file=None):
-        tl = TimingLoader()
-
-        if scenario is not None:
-            if scenario == 'demo_gap':
-                files = ['/home/justin/simulation_data/iros2022/barrier/demo_gap_all_2022-02-27-18-15-27.bag']
-            else:
-                files = ['/home/justin/simulation_data/iros2022/' + scenario + '/' + str(run) + ".bag" for run in range(10)]
-
-            for file in files:
-                tl.load_from_bag(file=file)
-        elif file is not None:
-            tl.load_from_bag(file=file)
-
-        tl.make_graphs()
-
-
-    def find_collisions(scenario):
-        if scenario == "industrial_plant":
-            file = '/home/justin/simulation_data/iros2022/industrial_plant/industrial_plant_all_2022-02-27-19-26-15.bag'
-        elif scenario == "clinic":
-            file = '/home/justin/simulation_data/iros2022/clinic/clinic_10_2022-02-28-13-59-31.bag'
-
-        c = RunStartTimesFinder()# CollisionFinder()
-        c.analyze_file(file=file)
-        print(str(c.collision_starts))
-
-    def get_results(scenario, files=None):
-        analyzer = ResultAnalyzer()
-        replacements = {'result': {'BUMPER_COLLISION': "BC", 'ABORTED': "AB", "TIMED_OUT": "TO", "SUCCEEDED": "SS"},
-                        'global_potential_weight': 'WEIGHT', 'min_obstacle_spacing': 'spacing',
-                      }
-        if files is None:
-            if scenario == 'demo_gap':
-                files = ['/home/justin/simulation_data/iros2022/barrier/barrier.results']
-            elif scenario == 'industrial_plant':
-                files = ['/home/justin/simulation_data/iros2022/industrial_plant/industrial_plant_all.results']
-            else:
-                runs = range(10)
-                #files = ['/home/justin/simulation_data/iros2022/' + scenario + '/' + str(run) + ".results" for run in runs]
-                files = ["/home/justin/simulation_data/iros2022/clinic/10_runs.results"]
-        analyzer.readFiles(filenames=files, replacements={'repeat':'seed'},blacklist ={'repeat':[28, 42]})
-        analyzer.generateGenericTable(independent=['scenario'], dependent='result', replacements=replacements) #
-
-    scenario = "industrial_plant"
-    #get_stats(scenario=scenario)
-    #get_results(scenario=scenario)
-
-    #get_results('demo_gap')
-
-    #find_collisions(scenario=scenario)
-
-    #get_stats(file="/home/justin/.ros/timing_hallway_2022-03-14-17-09-53.bag")
-    #get_stats(file="/home/justin/.ros/timing_clinic_2022-03-20-23-04-15.bag")
-
-
-    #get_results(scenario=None, files=['/home/justin/simulation_data/results_2022-03-24 14:21:54.732180'])
-    #analyze('/home/justin/simulation_data/iros2022/arxiv/timing_all_2022-03-24-14-22-01.bag')
-
-    #analyze3()
-    #analyze4()
-    analyze5(reload=False)
-
+    data_dir = "/tmp/aerial_pips_simulation_data"
+    results_file = None
+    analyze(data_dir=data_dir, results_file = results_file, reload=False)
     plt.show()
