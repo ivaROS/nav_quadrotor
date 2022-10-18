@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import os.path
 import glob
 import itertools
@@ -548,10 +549,6 @@ class CombinedResultAnalyzer(object):
         self.results= pickle.load(file=file)
 
     def process_data(self):
-        #analyzer = ResultAnalyzer()
-        #analyzer.results = self.results
-
-        #results = analyzer.getCases(whitelist={})
 
         results_w_planning = []
         for result in self.results:
@@ -578,10 +575,9 @@ class CombinedResultAnalyzer(object):
                         c = data["collisions"]
                         if len(c.collisions) > 0:
                             print(result["scenario"] + " " + result["seed"] + ": Collided")
-                            #result["result"] = "COLLISION"
                             thresh_time = data['planning_time'] + rospy.Duration(5)
                             if c.collisions[0] < thresh_time:
-                                print("Collision occurred Might have been system error")
+                                print("Collision occurred near start of run, might have been result of benchmarking system setup error")
                 else:
                     print("No 'extra_stuff' in [" + str(result) + "]")
             except Exception as e:
@@ -663,15 +659,23 @@ class CombinedResultAnalyzer(object):
                 combined_data = my_concat(datas)
 
                 def print_collision_locations(cases):
-                    print("Collision locations:")
+                    c_pnts = []
                     for case in cases:
                         try:
                             c = case['extra_stuff']['collisions']
                         except KeyError as e:
                             pass
                         else:
-                            for p in c.points:
-                                print(p)
+                            c_pnts += c.points
+                            #for p in c.points:
+                            #    print(p)
+                    if len(c_pnts)==0:
+                        print("No collisions detected in successful runs")
+
+                    else:
+                        print("Successful run(s) included collisions, this shouldn't happen. Locations of collisions:")
+                        for p in c_pnts:
+                            print(p)
 
                 print_collision_locations(cases=these_cases)
 
@@ -697,6 +701,7 @@ class CombinedResultAnalyzer(object):
                 planning_hist_keys = ['just_checking', 'total_planning']
                 #display_names = ['checking', 'planning']
 
+                print("Planning vs checking timing analysis:")
                 for k in planning_hist_keys:
                     print_stats(combined_data, k)
 
@@ -709,14 +714,12 @@ class CombinedResultAnalyzer(object):
                     return vals
 
                 bimodal_vals = [get_scaled_data(k) for k in planning_hist_keys]
-                #weights = [np.ones(len(vals)) / len(vals) for vals in bimodal_vals] #This normalizes each set of values independently
                 total_num_vals = sum(len(vals) for vals in bimodal_vals)
-                weights = [np.ones(len(vals)) / total_num_vals for vals in bimodal_vals] #This normalizes each set of values independently
+                weights = np.array([np.ones(len(vals)) / total_num_vals for vals in bimodal_vals], dtype=object) #This normalizes each set of values independently
 
-                ax = axes[plot_ind] #plt.subplot(num_plots,plot_ind,1)
-                #axes.append(ax)
+                ax = axes[plot_ind]
 
-
+                bimodal_vals = np.array(bimodal_vals, dtype=object)
                 ax.hist(x=bimodal_vals, density=False, weights=weights, label=[display_names[k] for k in planning_hist_keys])
                 ax.set_xlabel(xlabel="Time (ms)")
                 ax.yaxis.set_major_formatter(PercentFormatter(1))
@@ -837,18 +840,16 @@ class CombinedResultAnalyzer(object):
                         ax.set_xlabel('Time since depth image(ms)')
                         ax.set_yticks(yticks)
                         ax.set_yticklabels(ylabels)
-                        #ax.grid(True)
                         fig.set_tight_layout(True)
                         fig.set_size_inches(6, 3, forward=True)
 
                         for t in wait_times:
                             plt.axvline(x=t, linestyle='dashed', color='black')
 
+                print("Perception pipeline timing analysis:")
 
-
+                #Not directly recorded so must be inferred
                 combined_data["proj_conv"] -= np.mean(combined_data["nd_fm"]) - np.mean(combined_data["fastmarch"])
-
-                #combined_data["ec_update"] = np.array([4.2])
 
                 try:
                     tp = AsyncTimingPlotter(combined_data)
@@ -871,7 +872,7 @@ class CombinedResultAnalyzer(object):
                     print("Unable to generate timeline due to missing data: " + str(e))
 
 
-        print("Analyzing fail cases!")
+        print("\n\nAnalyzing fail cases:")
         for failure_type in ["BUMPER_COLLISION", "TIMED_OUT"]:
             cases = filter_results(results=self.results, whitelist={"result": failure_type})
             keys_vals = getValuesForKeys(results=cases, keys=["scenario"])
@@ -891,33 +892,7 @@ class CombinedResultAnalyzer(object):
                         else:
                             print(str(last_pos) + ": " + str(case['rosbag_file']))
 
-
-        measurements = {}
-
         return
-
-        for result in self.results:
-            try:
-                data = result['extra_stuff']
-                c = data["collisions"]
-                if len(c.collisions) > 0:
-                    print(result["scenario"] + " " + result["seed"] + ": Collided")
-            except:
-                pass
-
-        for result in self.results:
-            try:
-                data = result['extra_stuff']
-                if "collisions" not in data or len(data["collisions"].collisions==0):
-                    s = data["statistics"]
-
-                    self.sa.make_graphs(measurements = s)
-
-                    return
-            except:
-                pass
-
-        pass
 
 
 def get_pickled_file_path(filepath):
@@ -929,9 +904,6 @@ def get_pickled_file_path(filepath):
 
 
 def preprocess_result(result, force=False):
-    import os
-
-    #force = True
 
     if 'rosbag_file' in result:
 
@@ -941,14 +913,6 @@ def preprocess_result(result, force=False):
             return
 
         pickled_path = get_pickled_file_path(filepath=rosbag_file2)
-
-        '''
-        try:
-            os.remove(pickled_path)
-        except OSError as e:
-            print(str(e))
-        return
-        '''
 
         if force or not os.path.exists(pickled_path):
             print("Processing rosbag [" + rosbag_file2 + "]...")
@@ -999,10 +963,6 @@ def import_result(result):
 
     return []
 
-def convert_to_measurements(results):
-    pass
-
-
 
 class IndependentBagAnalyzer(CombinedResultAnalyzer):
 
@@ -1039,7 +999,7 @@ class IndependentBagAnalyzer(CombinedResultAnalyzer):
                 processed_results += import_result(result=result)
 
             if len(results) != len(processed_results):
-                print("Did not get the right number of processed results!")
+                print("Some results are missing details! This is fairly normal and includes cases that ended early due required processes crashing")
             #else:
             self.results = processed_results
             self.export_data(filepath=cached_result_file)
@@ -1060,6 +1020,7 @@ def generate_table(results):
 ##Based on code from https://fabianlee.org/2021/11/11/python-find-the-most-recently-modified-file-matching-a-pattern/
 def get_latest_file(data_dir):
     # get list of files that matches pattern
+    data_dir = os.path.expanduser(data_dir)
     pattern = os.path.join(data_dir, "results_*")
     files = list(filter(os.path.isfile, glob.glob(pattern)))
 
@@ -1081,27 +1042,15 @@ def analyze(data_dir, results_file=None, reload=False):
             print("Error! No matching files found!")
             raise
 
-    details = True
-
-    if details:
-        analyzer = IndependentBagAnalyzer()
-        analyzer.analyze(result_file=results_file, force=reload)
-        generate_table(analyzer.old_results)
-        print("new results:")
-        generate_table(analyzer.results)
-    else:
-        analyzer = ResultAnalyzer()
-        analyzer.readFiles(filenames=results_file, replacements={'repeat': 'seed'})
-        results = analyzer.getCases()
-        generate_table(results)
-
+    analyzer = IndependentBagAnalyzer()
+    analyzer.analyze(result_file=results_file, force=reload)
+    generate_table(analyzer.results)
     print("Done!")
 
 
-
+def main(data_dir="~/simulation_data", results_file=None, reload=False):
+    analyze(data_dir=data_dir, results_file = results_file, reload=reload)
+    plt.show()
 
 if __name__ == "__main__":
-    data_dir = "/tmp/aerial_pips_simulation_data"
-    results_file = None
-    analyze(data_dir=data_dir, results_file = results_file, reload=False)
-    plt.show()
+    main()
