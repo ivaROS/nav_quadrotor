@@ -25,9 +25,6 @@ quadrotor = rospack.get_path("nav_quadrotor") + "/launch/spawn_mav_hanging_cylin
 
 ControllerLauncher.registerController(name="aerial_pips", filepath=rospack.get_path("nav_quadrotor") + "/launch/aerial_pips.launch")
 
-
-data_dir = "/tmp/aerial_pips_simulation_data"
-
 def rosbag_key_getter(data_dir=None):
     if data_dir is not None:
         rosbag_dir = os.path.join(data_dir, "rosbags")
@@ -64,37 +61,38 @@ def multi_test_runner(tasks, **kwargs):
 
 
 
-def get_scenario_tasks(scenarios, num, show_gazebo, record_rosbag, data_dir, extra_args=None):
+def get_scenario_tasks(scenarios, set_size, num_sets, show_gazebo, record_rosbag, data_dir, extra_args=None):
     if not isinstance(scenarios, list):
         scenarios = [scenarios]
 
     add_rosbag_key = rosbag_key_getter(data_dir=data_dir)
     def getTasks():
         controller_freq = 5
-        for scenario in scenarios:
-            for repeat in range(num):
-                task = {'controller': 'aerial_pips', 'repeat': repeat, 'scenario': scenario, 'robot': quadrotor,
-                     'record': False, 'timeout': 360, 'world_args': {"gazebo_gui":show_gazebo},
-                        'controller_args': {'controller_freq': controller_freq}, 'robot_impl': "quadrotor"}
-                if record_rosbag:
-                    add_rosbag_key(task=task)
-                if extra_args is not None:
-                    task.update(extra_args)
-                yield task
+        for s in range(num_sets):
+            for scenario in scenarios:
+                for repeat in range(s*set_size, (s+1)*set_size):
+                    task = {'controller': 'aerial_pips', 'repeat': repeat, 'scenario': scenario, 'robot': quadrotor,
+                         'record': False, 'timeout': 360, 'world_args': {"gazebo_gui":show_gazebo},
+                            'controller_args': {'controller_freq': controller_freq}, 'robot_impl': "quadrotor"}
+                    if record_rosbag:
+                        add_rosbag_key(task=task)
+                    if extra_args is not None:
+                        task.update(extra_args)
+                    yield task
 
     return getTasks
+
+
+def main(data_dir="~/simulation_data" , record_rosbag=True, show_gazebo=True, scenarios=None, set_size=20, num_sets=1):
+    if scenarios is None:
+        scenarios = ['hall_obstacle_course', 'demo_gap']
+
+    multi_test_runner(tasks=get_scenario_tasks(scenarios=scenarios, num_sets=num_sets, set_size=set_size, show_gazebo=show_gazebo, record_rosbag=record_rosbag,
+                                                            data_dir=data_dir)(), num_masters=1, save_results=True, use_existing_roscore=False, data_dir=data_dir)
+
 
 
 
 
 if __name__ == "__main__":
-    data_dir = "/tmp/aerial_pips_simulation_data"
-    record_rosbag = True
-    show_gazebo = True
-    num = 20
-    scenarios = ['hall_obstacle_course', 'demo_gap']
-    multi_test_runner(tasks=get_scenario_tasks(scenarios=scenarios, num=num, show_gazebo=show_gazebo, record_rosbag=record_rosbag,
-                                                        data_dir=data_dir)(), num_masters=1, save_results=True, use_existing_roscore=False, data_dir=data_dir)
-
-
-
+    main()
