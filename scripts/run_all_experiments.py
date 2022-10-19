@@ -83,16 +83,17 @@ def get_scenario_tasks(scenarios, set_size, num_sets, show_gazebo, record_rosbag
     return getTasks
 
 
-def main(data_dir="~/simulation_data" , record_rosbag=True, show_gazebo=True, scenarios=None, set_size=20, num_sets=1):
-    if scenarios is None:
-        scenarios = ['hall_obstacle_course', 'demo_gap']
-
-    multi_test_runner(tasks=get_scenario_tasks(scenarios=scenarios, num_sets=num_sets, set_size=set_size, show_gazebo=show_gazebo, record_rosbag=record_rosbag,
-                                                            data_dir=data_dir)(), num_masters=1, save_results=True, use_existing_roscore=False, data_dir=data_dir)
-
-
-
-
 
 if __name__ == "__main__":
-    main()
+    data_dir = "~/simulation_data"      #Root directory for recorded data
+    record_rosbag = True                #Should a rosbag be recorded containing details about each run? See launch/aerial_pips.launch for recorded topics
+    show_gazebo = True                  #Display Gazebo's GUI while running experiments?
+    scenarios = ['hall_obstacle_course', 'demo_gap']    #Which scenarios should be run?
+    set_size = 20                       #How many times should each scenario be run before switching to the next?
+    num_sets = 1                        #How many times should the entire set of experiments be repeated?
+
+    multi_test_runner(tasks=get_scenario_tasks(scenarios=scenarios, num_sets=num_sets, set_size=set_size, show_gazebo=show_gazebo, record_rosbag=record_rosbag,
+                                                        data_dir=data_dir)(), num_masters=1, save_results=True, use_existing_roscore=False, data_dir=data_dir)
+
+
+
