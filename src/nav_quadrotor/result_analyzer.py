@@ -838,6 +838,7 @@ class CombinedResultAnalyzer(object):
                         ax.invert_yaxis()
                         ax.set_xlim(0, maxx)
                         ax.set_xlabel('Time since depth image(ms)')
+                        ax.set_title(display_names[value])
                         ax.set_yticks(yticks)
                         ax.set_yticklabels(ylabels)
                         fig.set_tight_layout(True)
@@ -1050,7 +1051,10 @@ def analyze(data_dir, results_file=None, reload=False):
 
 def main(data_dir="~/simulation_data", results_file=None, reload=False):
     analyze(data_dir=data_dir, results_file = results_file, reload=reload)
-    plt.show()
+    try:
+        plt.show()
+    except KeyboardInterrupt:
+        pass
 
 if __name__ == "__main__":
     main()

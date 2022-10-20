@@ -20,7 +20,6 @@ plt.switch_backend('agg')
 
 from scipy.ndimage.morphology import distance_transform_edt
 from scipy.interpolate import griddata, interp2d
-from sklearn.cluster import DBSCAN
 from skimage.morphology import local_minima
 
 ##ROS packages
