@@ -75,11 +75,14 @@
   <exec_depend>rotors_simulator</exec_depend>
   <exec_depend>camera_compression</exec_depend>
 
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-scipy</exec_depend>
+  <exec_depend>python3-skimage</exec_depend>
+  <exec_depend>python3-matplotlib</exec_depend>
+
   <!-- The export tag contains other, unspecified, tags -->
   <export>
     <!-- Other tools can request additional information be placed here -->
-    <gazebo_ros gazebo_model_path="${prefix}/models"/>
-
   </export>
 
 </package>
