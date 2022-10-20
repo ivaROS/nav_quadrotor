@@ -28,6 +28,7 @@ ControllerLauncher.registerController(name="aerial_pips", filepath=rospack.get_p
 def rosbag_key_getter(data_dir=None):
     if data_dir is not None:
         rosbag_dir = os.path.join(data_dir, "rosbags")
+        rosbag_dir = os.path.expanduser(data_dir)
         Path(rosbag_dir).mkdir(parents=True, exist_ok=True)
 
         def add_rosbag_key(task):
@@ -85,12 +86,12 @@ def get_scenario_tasks(scenarios, set_size, num_sets, show_gazebo, record_rosbag
 
 
 if __name__ == "__main__":
-    data_dir = "~/simulation_data"      #Root directory for recorded data
+    data_dir = "~/aerial_pips_simulation_data"      #Root directory for recorded data
     record_rosbag = True                #Should a rosbag be recorded containing details about each run? See launch/aerial_pips.launch for recorded topics
     show_gazebo = True                  #Display Gazebo's GUI while running experiments?
     scenarios = ['hall_obstacle_course', 'demo_gap']    #Which scenarios should be run?
-    set_size = 20                       #How many times should each scenario be run before switching to the next?
-    num_sets = 1                        #How many times should the entire set of experiments be repeated?
+    set_size = 50                       #How many times should each scenario be run before switching to the next?
+    num_sets = 5                        #How many times should the entire set of experiments be repeated?
 
     multi_test_runner(tasks=get_scenario_tasks(scenarios=scenarios, num_sets=num_sets, set_size=set_size, show_gazebo=show_gazebo, record_rosbag=record_rosbag,
                                                         data_dir=data_dir)(), num_masters=1, save_results=True, use_existing_roscore=False, data_dir=data_dir)
