@@ -31,13 +31,12 @@
     /egocylinder/detailed_candidate_waypoints
     /egocylinder/gap_sizes_markers
     /hummingbird/obstacle_avoidance_controller_node/end_point_trajectory_source/resampled_candidate_waypoints
-    /hummingbird/freespace_estimator_node/freespace_estimator/convolved_projection
     /hummingbird/obstacle_avoidance_controller_node/egocylindrical_image_cc_wrapper/egocylindrical_image_collision_checker/collisions
     /hummingbird/obstacle_avoidance_controller_node/conservative_inflated_egocylindrical_image_cc_wrapper/egocylindrical_image_collision_checker/collisions
     /hummingbird/obstacle_avoidance_controller_node/liberal_inflated_egocylindrical_image_cc_wrapper/egocylindrical_image_collision_checker/collisions
     /hummingbird/obstacle_avoidance_controller_node/inflated_egocan_cc_wrapper1/egocan_collision_checker/collisions
     /hummingbird/obstacle_avoidance_controller_node/inflated_egocan_cc_wrapper2/egocan_collision_checker/collisions
-    /hummingbird/remaining_trajectory /hummingbird/evaluated_trajectories
+    /hummingbird/evaluated_trajectories
     /hummingbird/ground_truth/odometry /move_base_simple/goal
     /hummingbird/original_trajectories
     /centroids
@@ -46,15 +45,19 @@
     /hummingbird/joint_state
     /hummingbird/obstacle_avoidance_controller_node/end_point_trajectory_source/transformed_candidate_waypoints
     /egocylinder/cur_path_goal
-    /egocylinder/data
-    /egocylinder/egocylinder_info
     /hummingbird/selected_trajectory
     /hummingbird/remaining_trajectory
     /hummingbird/obstacle_avoidance_controller_node/potentials_planner/potential
     /hummingbird/obstacle_avoidance_controller_node/potentials_planner/plan
     /hummingbird/bumper
+    "/>
+
+    <!--
+    /egocylinder/data
+    /hummingbird/freespace_estimator_node/freespace_estimator/convolved_projection
+    /egocylinder/egocylinder_info
     /rs0r200/camera/depth_throttled/camera_info
     /rs0r200/camera/depth_throttled/image_raw
-    "/>
+    -->
 
 </launch>
